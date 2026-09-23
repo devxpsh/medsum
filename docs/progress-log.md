@@ -51,3 +51,6 @@ This log tracks implementation milestones across Steps 1 through 8 as required b
 - **Key Decisions**: Documented prompt tuning, adversarial verification mapping to the >=85% quality bar, and theoretical scaling (async workers, caching, batch APIs). Validated 100% test pass rate across unit and integration tests.
 - **Deviations**: None.
 - **What's Left**: Complete! Ready for screen capture demonstration across CLI, Streamlit, and ADK Web.
+
+### Hotfix: Future Date Resolution (PMID 2027 Issue)
+- **Fix**: Updated `_extract_pub_date` in [`tools/pubmed_tool.py`](file:///Users/piyushkumar/hackathons/tcs/medsum/tools/pubmed_tool.py) to resolve ahead-of-print publisher placeholder dates (e.g. `2027 Aug 12`) to actual electronic publication dates (`PubMedPubDate` status `pubmed`/`epublish`), ensuring no erroneous future years appear in CLI/Web output. Added automated regression test in `tests/test_pipeline.py`.

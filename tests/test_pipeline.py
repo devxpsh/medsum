@@ -85,6 +85,35 @@ def test_pubmed_xml_parsing():
     assert "HR 0.57" in rec["abstract_text"]
 
 
+def test_pubmed_future_date_sanitization():
+    """Verify that placeholder future years (e.g., 2027) resolve to real PubMed publication dates."""
+    future_date_xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <PubmedArticleSet>
+      <PubmedArticle>
+        <MedlineCitation>
+          <PMID>42753782</PMID>
+          <Article>
+            <ArticleTitle>Future Issue Article</ArticleTitle>
+            <Journal>
+              <JournalIssue><PubDate><Year>2027</Year><Month>Aug</Month><Day>12</Day></PubDate></JournalIssue>
+            </Journal>
+            <Abstract><AbstractText>Sample abstract content.</AbstractText></Abstract>
+          </Article>
+        </MedlineCitation>
+        <PubmedData>
+          <History>
+            <PubMedPubDate PubStatus="pubmed"><Year>2026</Year><Month>Sep</Month><Day>17</Day></PubMedPubDate>
+          </History>
+        </PubmedData>
+      </PubmedArticle>
+    </PubmedArticleSet>
+    """
+    records = parse_pubmed_xml(future_date_xml)
+    assert len(records) == 1
+    assert "2027" not in records[0]["pub_date"]
+    assert "2026 Sep 17" in records[0]["pub_date"]
+
+
 def test_summarizer_schema_conformance():
     """Verify that generated summaries conform to the required 5-section Pydantic schema."""
     summary_data = _offline_summarize_fallback(SAMPLE_ABSTRACT, pmid="38001001")

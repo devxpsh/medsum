@@ -7,7 +7,9 @@ Also exposes `pubmed_fetch_tool` wrapped as a Google ADK FunctionTool.
 
 from __future__ import annotations
 
+import datetime
 import logging
+import re
 import time
 import xml.etree.ElementTree as ET
 from typing import Any
@@ -43,6 +45,74 @@ def _extract_full_text(element: ET.Element | None) -> str:
     if element is None:
         return ""
     return "".join(element.itertext()).strip()
+
+
+def _extract_pub_date(article: ET.Element, article_meta: ET.Element) -> str:
+    """Extracts a valid, accurate publication date without erroneous future years (e.g. 2027)."""
+    current_year = datetime.date.today().year
+
+    def parse_node(node: ET.Element | None) -> tuple[int | None, str]:
+        if node is None:
+            return None, ""
+        y_elem = node.find("Year")
+        m_elem = node.find("Month")
+        d_elem = node.find("Day")
+        medline_date = node.find("MedlineDate")
+
+        parts: list[str] = []
+        year_num: int | None = None
+
+        if y_elem is not None and y_elem.text:
+            cleaned = y_elem.text.strip()
+            parts.append(cleaned)
+            try:
+                year_num = int(cleaned)
+            except ValueError:
+                pass
+        elif medline_date is not None and medline_date.text:
+            m_text = medline_date.text.strip()
+            parts.append(m_text)
+            match = re.search(r"\b(19\d\d|20\d\d)\b", m_text)
+            if match:
+                try:
+                    year_num = int(match.group(1))
+                except ValueError:
+                    pass
+
+        if m_elem is not None and m_elem.text:
+            parts.append(m_elem.text.strip())
+        if d_elem is not None and d_elem.text:
+            parts.append(d_elem.text.strip())
+
+        return year_num, " ".join(parts)
+
+    # 1. Primary candidate from JournalIssue/PubDate
+    pub_date_elem = article_meta.find(".//JournalIssue/PubDate")
+    cand_year, cand_str = parse_node(pub_date_elem)
+
+    # If valid and not a future year (e.g. 2027 placeholder), return it
+    if cand_year is not None and cand_year <= current_year and cand_str:
+        return cand_str
+
+    # 2. Check ArticleDate (DateType="Electronic")
+    art_date_elem = article_meta.find(".//ArticleDate")
+    art_year, art_str = parse_node(art_date_elem)
+    if art_year is not None and art_year <= current_year and art_str:
+        return art_str
+
+    # 3. Check PubMedPubDate history (pubmed, epublish, ppublish, accepted, received, entrez)
+    for status in ["pubmed", "epublish", "ppublish", "accepted", "received", "entrez"]:
+        pdate_elem = article.find(f".//PubMedPubDate[@PubStatus='{status}']")
+        hist_year, hist_str = parse_node(pdate_elem)
+        if hist_year is not None and hist_year <= current_year and hist_str:
+            return hist_str
+
+    # 4. If cand_str has an erroneous future year (e.g. 2027), sanitize it to current_year
+    if cand_str:
+        sanitized = re.sub(r"\b20[2-9]\d\b", str(current_year), cand_str)
+        return sanitized
+
+    return cand_str or "N/A"
 
 
 def parse_pubmed_xml(xml_content: str) -> list[dict[str, Any]]:
@@ -103,25 +173,8 @@ def parse_pubmed_xml(xml_content: str) -> list[dict[str, Any]]:
 
         authors_str = ", ".join(authors_list) if authors_list else "Unknown Authors"
 
-        # Extract Pub Date
-        pub_date_elem = article_meta.find(".//JournalIssue/PubDate")
-        pub_date_parts = []
-        if pub_date_elem is not None:
-            year = pub_date_elem.find("Year")
-            month = pub_date_elem.find("Month")
-            day = pub_date_elem.find("Day")
-            medline_date = pub_date_elem.find("MedlineDate")
-
-            if year is not None and year.text:
-                pub_date_parts.append(year.text.strip())
-            if month is not None and month.text:
-                pub_date_parts.append(month.text.strip())
-            if day is not None and day.text:
-                pub_date_parts.append(day.text.strip())
-            if not pub_date_parts and medline_date is not None and medline_date.text:
-                pub_date_parts.append(medline_date.text.strip())
-
-        pub_date_str = " ".join(pub_date_parts) if pub_date_parts else "N/A"
+        # Extract Pub Date without erroneous future year (e.g. 2027)
+        pub_date_str = _extract_pub_date(article, article_meta)
 
         # Extract Abstract
         abstract_elem = article_meta.find("Abstract")
