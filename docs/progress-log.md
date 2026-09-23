@@ -33,3 +33,21 @@ This log tracks implementation milestones across Steps 1 through 8 as required b
 - **Key Decisions**: Designed formatted human-readable terminal output showing structured summary sections, audit report, confidence percentage against the >=85% threshold, and aggregate batch statistics. Added `--output` flag for JSON serialization.
 - **Deviations**: None. Validated `--file data/sample_abstract.txt` successfully.
 - **What's Left**: Steps 6–8 (Synthetic test data, Web UI, Docs).
+
+## Milestone 6: Synthetic Test Dataset (data/synthetic_abstracts.json)
+- **Built**: Created `data/synthetic_abstracts.json` containing 6 realistic clinical study abstracts across diverse specialties (Oncology, Metabolic Disease, Neurology, Cardiology, Infectious Disease, Rheumatology).
+- **Key Decisions**: Complied strictly with TCS brief data constraints: completely synthetic, zero patient-identifying data, realistic medical nomenclature, trial designs, statistical metrics (CIs, HRs, p-values), and full author/date metadata.
+- **Deviations**: None. Tested `--batch-file data/synthetic_abstracts.json` with 100% pass rate.
+- **What's Left**: Steps 7–8 (Web UI & Video Demo Setup, Documentation & Tests).
+
+## Milestone 7: Web Demo UI (ADK Web & Streamlit App)
+- **Built**: Configured `agents/agent.py` exposing `root_agent` (`medlit_agent`) compatible with `adk web .`. Developed a complementary full-featured Streamlit UI (`app.py`) providing interactive tabs for batch processing 6 synthetic abstracts, live NCBI PubMed queries with cards, manual text analysis, and live >=85% quality score badges.
+- **Key Decisions**: Provided dual-mode UI: ADK Web for native agent-engine developer interface, and Streamlit `app.py` for comprehensive video demo recording of batch processing, pass/fail metrics, and JSON downloads.
+- **Deviations**: None.
+- **What's Left**: Step 8 (Documentation docs/approach.md, test suite, demo video guide).
+
+## Milestone 8: Documentation, Test Suite & Demo Preparation (docs/approach.md, tests/, README.md)
+- **Built**: Authored comprehensive architectural report `docs/approach.md`, built 7-part automated test suite `tests/test_pipeline.py` with `pytest.ini`, created `.env.example`, and created comprehensive project `README.md`.
+- **Key Decisions**: Documented prompt tuning, adversarial verification mapping to the >=85% quality bar, and theoretical scaling (async workers, caching, batch APIs). Validated 100% test pass rate across unit and integration tests.
+- **Deviations**: None.
+- **What's Left**: Complete! Ready for screen capture demonstration across CLI, Streamlit, and ADK Web.
